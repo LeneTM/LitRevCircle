@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Literatuurstudie — cirkelvormig proces</title>
+<style>
+  :root{
+    --tm-blauw:#00283C;
+    --tm-blauw-zacht:#3d5567;
+    --tm-oranje:#fa6432;
+    --tm-oranje-zacht:#ffe2d4;
+    --slate:#5c6b7a;
+    --line:#d8dde3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,"Segoe UI",Arial,Helvetica,sans-serif;
+    background:#ffffff;
+    color:var(--tm-blauw);
+  }
+  .wrap{
+    max-width:1080px;
+    margin:0 auto;
+    padding:22px 18px 32px;
+  }
+
+  .stage{
+    display:flex;
+    gap:24px;
+    align-items:flex-start;
+    flex-wrap:nowrap;
+  }
+
+  .diagram-col{
+    flex:1 1 440px;
+    min-width:0;
+    display:flex;
+    justify-content:center;
+  }
+  .diagram-col svg{
+    width:100%;
+    max-width:560px;
+    height:auto;
+    overflow:visible;
+  }
+
+  /* Node styling */
+  .node-circle{
+    fill:#ffffff;
+    stroke:var(--tm-blauw);
+    stroke-width:3;
+    transition:fill .15s, stroke .15s, filter .15s;
+    cursor:pointer;
+  }
+  .node-group:hover .node-circle, .node-group:focus-visible .node-circle{
+    fill:var(--tm-oranje-zacht);
+    stroke:var(--tm-oranje);
+  }
+  .node-group.active .node-circle{
+    fill:var(--tm-oranje);
+    stroke:var(--tm-blauw);
+  }
+  .node-num{
+    font-family:Georgia,serif;
+    font-size:26px;
+    font-weight:700;
+    fill:var(--tm-blauw);
+    text-anchor:middle;
+    dominant-baseline:central;
+    pointer-events:none;
+  }
+  .node-group.active .node-num{fill:#ffffff;}
+  .node-label{
+    font-family:-apple-system,"Segoe UI",Arial,sans-serif;
+    font-size:19px;
+    font-weight:700;
+    fill:var(--tm-blauw);
+    text-anchor:middle;
+    pointer-events:none;
+  }
+  .node-label tspan{font-weight:700;}
+  .node-group{cursor:pointer;}
+  .node-group:focus-visible .node-circle{outline:none; filter:drop-shadow(0 0 0 3px rgba(250,100,50,0.45));}
+
+  .flow-ring{
+    fill:none;
+    stroke:var(--tm-blauw-zacht);
+    stroke-width:2;
+    opacity:0.3;
+  }
+  .arrowhead{
+    fill:none;
+    stroke:var(--tm-blauw-zacht);
+    stroke-width:2.5;
+    stroke-linecap:round;
+    opacity:0.55;
+  }
+
+  /* Citation ring (parallel circle) — dikker, oranje, klikbaar */
+  .citation-ring{
+    fill:none;
+    stroke:var(--tm-oranje);
+    stroke-width:6;
+    stroke-dasharray:2 14;
+    stroke-linecap:round;
+    cursor:pointer;
+    transition:stroke .15s, stroke-width .15s, opacity .15s;
+  }
+  .citation-ring:hover, .citation-ring:focus-visible{
+    stroke:var(--tm-blauw);
+  }
+  .citation-ring.active{
+    stroke:var(--tm-blauw);
+  }
+  .citation-arc-text{
+    font-family:-apple-system,"Segoe UI",Arial,sans-serif;
+    font-size:21px;
+    font-weight:800;
+    letter-spacing:1.5px;
+    fill:var(--tm-oranje);
+    cursor:pointer;
+    transition:fill .15s;
+  }
+  .citation-arc-text:hover, .citation-arc-text.active{
+    fill:var(--tm-blauw);
+  }
+
+  .center-sub{
+    font-family:-apple-system,"Segoe UI",Arial,sans-serif;
+    font-size:12px;
+    fill:var(--slate);
+    text-anchor:middle;
+    pointer-events:none;
+  }
+
+  /* Explanation panel */
+  .panel-col{
+    flex:1 1 320px;
+    min-width:260px;
+  }
+  .explain-panel{
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:22px 24px;
+    min-height:260px;
+    box-shadow:0 1px 3px rgba(0,40,60,0.08);
+  }
+  .explain-panel .eyebrow{
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--tm-oranje);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .explain-panel h3{
+    font-family:Georgia,serif;
+    margin:0 0 12px;
+    font-size:19px;
+    color:var(--tm-blauw);
+    line-height:1.3;
+  }
+  .explain-panel p{
+    margin:0 0 10px;
+    font-size:14.5px;
+    line-height:1.65;
+    color:#33404f;
+  }
+  .explain-panel p:last-child{margin-bottom:0;}
+  .explain-panel .placeholder{
+    color:var(--slate);
+    font-style:italic;
+  }
+  .genai-note{
+    margin-top:14px;
+    background:var(--tm-oranje-zacht);
+    border:1px solid #ffc4a3;
+    border-radius:8px;
+    padding:12px 14px;
+    font-size:13.5px;
+    line-height:1.55;
+    color:#5c3018;
+  }
+  .genai-note b{color:#3d1f0f;}
+
+  /* Apart kader voor "correct refereren" — los van het gewone explain-panel */
+  .citation-panel{
+    margin-top:16px;
+    background:var(--tm-blauw);
+    border:2px solid var(--tm-blauw);
+    border-radius:10px;
+    padding:22px 24px;
+    display:none;
+    box-shadow:0 2px 8px rgba(0,40,60,0.25);
+  }
+  .citation-panel.visible{display:block;}
+  .citation-panel .eyebrow{
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--tm-oranje);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .citation-panel h3{
+    font-family:Georgia,serif;
+    margin:0 0 12px;
+    font-size:19px;
+    color:#ffffff;
+    line-height:1.3;
+  }
+  .citation-panel p{
+    margin:0 0 10px;
+    font-size:14.5px;
+    line-height:1.65;
+    color:#e8eef2;
+  }
+  .citation-panel p:last-child{margin-bottom:0;}
+  .citation-panel b{color:var(--tm-oranje);}
+
+  .progress-track{
+    margin-top:16px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .progress-bar{
+    flex:1;
+    height:6px;
+    background:var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background:var(--tm-oranje);
+    border-radius:4px;
+    width:0%;
+    transition:width .25s;
+  }
+  .progress-text{
+    font-size:12px;
+    color:var(--slate);
+    white-space:nowrap;
+  }
+  .progress-text b{color:var(--tm-blauw);}
+
+  .legend{
+    display:flex;
+    gap:18px;
+    margin-top:14px;
+    flex-wrap:wrap;
+    font-size:12.5px;
+    color:var(--slate);
+  }
+  .legend-item{display:flex; align-items:center; gap:6px;}
+  .swatch{width:16px; height:0; border-top:3px solid var(--tm-blauw-zacht); opacity:0.5;}
+  .swatch.dashed{border-top:4px dotted var(--tm-oranje); opacity:1;}
+
+  :focus-visible{outline:3px solid var(--tm-oranje); outline-offset:2px;}
+
+  @media (max-width:760px){
+    .stage{flex-direction:column;}
+    .diagram-col{order:1;}
+    .panel-col{order:2;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="stage">
+    <div class="diagram-col">
+      <svg viewBox="0 0 900 900" role="img" aria-label="Cirkelvormig diagram van het literatuurstudieproces">
+
+        <!-- outer flow ring (decorative path connecting nodes) -->
+        <circle class="flow-ring" cx="450" cy="450" r="320"></circle>
+
+        <!-- arrowheads at segment midpoints, pointing clockwise -->
+        <g class="arrowhead">
+          <path d="M 561.5,155.4 L 572.5,154.4 L 565.5,145.9"></path>
+          <path d="M 737.2,320.5 L 745.6,327.5 L 746.7,316.6"></path>
+          <path d="M 744.6,561.5 L 745.6,572.5 L 754.1,565.5"></path>
+          <path d="M 579.5,737.2 L 572.5,745.6 L 583.4,746.7"></path>
+          <path d="M 338.5,744.6 L 327.5,745.6 L 334.5,754.1"></path>
+          <path d="M 162.8,579.5 L 154.4,572.5 L 153.3,583.4"></path>
+          <path d="M 155.4,338.5 L 154.4,327.5 L 145.9,334.5"></path>
+          <path d="M 320.5,162.8 L 327.5,154.4 L 316.6,153.3"></path>
+        </g>
+
+        <!-- citation ring: inset, dikke gestippelde oranje boog -->
+        <circle class="citation-ring" id="citationRing" tabindex="0" role="button"
+                aria-label="Correct refereren — speelt mee bij elke stap"
+                cx="450" cy="450" r="230"></circle>
+
+        <!-- onzichtbaar pad waarlangs de gebogen tekst loopt — binnen de stippellijn, met ruime afstand ertussen -->
+        <path id="citationArcPath" d="M 298.4,362.5 A 175,175 0 0,1 601.6,362.5" fill="none" stroke="none"></path>
+        <text class="citation-arc-text" id="citationArcText" tabindex="0" role="button"
+              aria-label="Correct refereren — speelt mee bij elke stap">
+          <textPath href="#citationArcPath" startOffset="50%" text-anchor="middle">CORRECT REFEREREN</textPath>
+        </text>
+
+        <!-- center hub -->
+        <text class="center-sub" x="450" y="455">klik op een stap</text>
+        <text class="center-sub" x="450" y="472">voor uitleg</text>
+
+        <!-- ===== Node 1: Verkennen ===== -->
+        <g class="node-group" id="node-verkennen" tabindex="0" role="button" data-id="verkennen">
+          <circle class="node-circle" cx="450" cy="130" r="58"></circle>
+          <text class="node-num" x="450" y="131">1</text>
+          <text class="node-label" x="450" y="206">Verkennen</text>
+        </g>
+
+        <!-- ===== Node 2: Zoekvraag ===== -->
+        <g class="node-group" id="node-zoekvraag" tabindex="0" role="button" data-id="zoekvraag">
+          <circle class="node-circle" cx="676" cy="224" r="58"></circle>
+          <text class="node-num" x="676" y="225">2</text>
+          <text class="node-label" x="676" y="300">Zoekvraag</text>
+        </g>
+
+        <!-- ===== Node 3: Strategie ===== -->
+        <g class="node-group" id="node-strategie" tabindex="0" role="button" data-id="strategie">
+          <circle class="node-circle" cx="770" cy="450" r="58"></circle>
+          <text class="node-num" x="770" y="451">3</text>
+          <text class="node-label" x="770" y="526">Strategie</text>
+        </g>
+
+        <!-- ===== Node 4: Zoeken ===== -->
+        <g class="node-group" id="node-zoeken" tabindex="0" role="button" data-id="zoeken">
+          <circle class="node-circle" cx="676" cy="676" r="58"></circle>
+          <text class="node-num" x="676" y="677">4</text>
+          <text class="node-label" x="676" y="752">Zoeken</text>
+        </g>
+
+        <!-- ===== Node 5: Selecteren ===== -->
+        <g class="node-group" id="node-selecteren" tabindex="0" role="button" data-id="selecteren">
+          <circle class="node-circle" cx="450" cy="770" r="58"></circle>
+          <text class="node-num" x="450" y="771">5</text>
+          <text class="node-label" x="450" y="846">Selecteren</text>
+        </g>
+
+        <!-- ===== Node 6: Lezen & synthetiseren (twee lijnen, gecentreerd) ===== -->
+        <g class="node-group" id="node-lezen" tabindex="0" role="button" data-id="lezen">
+          <circle class="node-circle" cx="224" cy="676" r="58"></circle>
+          <text class="node-num" x="224" y="677">6</text>
+          <text class="node-label" x="224" y="752">
+            <tspan x="224" dy="0">Lezen &amp;</tspan>
+            <tspan x="224" dy="18">synthetiseren</tspan>
+          </text>
+        </g>
+
+        <!-- ===== Node 7: Structureren ===== -->
+        <g class="node-group" id="node-structureren" tabindex="0" role="button" data-id="structureren">
+          <circle class="node-circle" cx="130" cy="450" r="58"></circle>
+          <text class="node-num" x="130" y="451">7</text>
+          <text class="node-label" x="130" y="526">Structureren</text>
+        </g>
+
+        <!-- ===== Node 8: Schrijven ===== -->
+        <g class="node-group" id="node-schrijven" tabindex="0" role="button" data-id="schrijven">
+          <circle class="node-circle" cx="224" cy="224" r="58"></circle>
+          <text class="node-num" x="224" y="225">8</text>
+          <text class="node-label" x="224" y="300">Schrijven</text>
+        </g>
+
+      </svg>
+    </div>
+
+    <div class="panel-col">
+      <div class="explain-panel" id="explainPanel">
+        <div class="eyebrow">Stap in de literatuurstudie</div>
+        <h3 id="explainTitle">Begin hier</h3>
+        <p id="explainText" class="placeholder">Klik op een stap in de cirkel, of op de oranje boog, om de uitleg te zien.</p>
+        <div class="genai-note" id="genaiNote" style="display:none;">
+          <b>Over GenAI:</b> een generatieve AI-tool (zoals ChatGPT of Copilot) kan handig zijn als <b>coach</b> bij deze verkennende fase — bijvoorbeeld om je wegwijs te maken in onbekende begrippen of om denkrichtingen te suggereren. Gebruik GenAI hier echter niet als betrouwbare <b>informatiebron</b>: de inhoud kan onjuist, verouderd of onbestaand zijn (zogenaamde "hallucinaties"), en bronvermeldingen die een AI-tool aanreikt moet je altijd zelf verifiëren in een echte databank of catalogus.
+        </div>
+      </div>
+
+      <div class="citation-panel" id="citationPanel">
+        <div class="eyebrow">Correct refereren — bij elke stap</div>
+        <h3>Geen losse stap, maar een doorlopende gewoonte</h3>
+        <p>Correct refereren staat niet toevallig als apart kader hier: het is geen fase die je pas op het einde uitvoert, maar een gewoonte die je door het hele proces volhoudt.</p>
+        <p>Noteer al tijdens het <b>zoeken</b> de volledige bibliografische gegevens van elke bron. Geef tijdens het <b>lezen</b> meteen aan welk idee van welke auteur komt. Verwerk bij het <b>schrijven</b> bronvermeldingen consequent volgens de citatiestijl die je opleiding vereist (bijvoorbeeld APA).</p>
+        <p>Zo vermijd je onbedoeld plagiaat, en bespaar je jezelf het tijdrovende achteraf opzoeken van bronnen die je al gelezen had.</p>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText"><b>0</b> van 9 onderdelen bekeken</div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><span class="swatch"></span> Volgorde van de stappen</div>
+        <div class="legend-item"><span class="swatch dashed"></span> Correct refereren (doorlopend)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const explanations = {
+  verkennen: {
+    title: "1 — Verkennen",
+    text: "<p>Voor je een precieze zoekvraag kan formuleren, verken je eerst breed waar het onderwerp over gaat. Lees een aantal algemene bronnen (een inleidend hoofdstuk, een overzichtsartikel, een encyclopedie-item) om vertrouwd te raken met de belangrijkste begrippen, auteurs en discussies binnen het onderwerp.</p><p>Deze stap voorkomt dat je te vroeg een te smalle of net te brede zoekvraag kiest.</p>",
+    genai: true
+  },
+  zoekvraag: {
+    title: "2 — Zoekvraag formuleren",
+    text: "<p>Op basis van je verkenning formuleer je een concrete, afgebakende zoekvraag of onderzoeksvraag. Een goede zoekvraag is specifiek genoeg om hanteerbaar te blijven, maar breed genoeg om voldoende relevante literatuur op te leveren.</p><p>Veel studenten gebruiken hier een hulpmiddel zoals PICO (gezondheidswetenschappen) of de gewone wie-wat-waar-structuur om de vraag scherp te stellen.</p>"
+  },
+  strategie: {
+    title: "3 — Zoekstrategie opstellen",
+    text: "<p>Vertaal je zoekvraag naar concrete zoektermen, synoniemen en eventueel vertalingen (NL/EN). Bepaal welke databanken en catalogi (zoals Limo) relevant zijn voor je vakgebied, en hoe je zoektermen combineert met Booleaanse operatoren (EN, OF, NIET).</p><p>Een doordachte strategie bespaart je later veel tijd: ze bepaalt of je zoekactie te veel ruis of net te weinig resultaten oplevert.</p>"
+  },
+  zoeken: {
+    title: "4 — Bronnen zoeken &amp; verzamelen",
+    text: "<p>Voer je zoekstrategie uit in de gekozen databanken en bibliotheekcatalogi. Verzamel de resultaten systematisch, bijvoorbeeld in een referentiebeheerprogramma (zoals Zotero of EndNote), zodat je geen bronnen verliest en meteen al begint met correct bronbeheer.</p><p>Pas je zoekstrategie gerust aan tijdens het zoeken: vaak ontdek je nieuwe trefwoorden of synoniemen die je oorspronkelijke strategie nog verbeteren.</p>"
+  },
+  selecteren: {
+    title: "5 — Bronnen selecteren &amp; beoordelen",
+    text: "<p>Niet elke gevonden bron is geschikt. Beoordeel elke bron kritisch op relevantie (sluit ze aan bij je zoekvraag?), betrouwbaarheid (is ze peer-reviewed, wie is de auteur, hoe recent is ze?) en kwaliteit van de inhoud.</p><p>Gebruik hierbij gerust eerst titel en samenvatting (abstract) om snel te filteren, voor je een bron volledig leest.</p>"
+  },
+  lezen: {
+    title: "6 — Lezen &amp; synthetiseren",
+    text: "<p>Lees de geselecteerde bronnen grondig en actief: maak notities, markeer kernargumenten, en leg verbanden tussen verschillende bronnen. Een literatuurstudie is geen opsomming van samenvattingen, maar een synthese: je brengt overeenkomsten, verschillen en hiaten tussen bronnen in kaart.</p><p>Stel jezelf bij elke bron de vraag: hoe verhoudt dit zich tot wat andere auteurs zeggen?</p>"
+  },
+  structureren: {
+    title: "7 — Structuur uitwerken",
+    text: "<p>Op basis van je synthese bouw je een logische structuur voor je literatuurstudie op: meestal geordend per thema, per chronologie, of per methodologische benadering — niet zomaar bron per bron.</p><p>Maak een uitgebreide outline met hoofd- en subsecties voor je begint te schrijven. Dat maakt het schrijfproces zelf een stuk vlotter.</p>"
+  },
+  schrijven: {
+    title: "8 — Schrijven",
+    text: "<p>Werk je outline uit tot doorlopende tekst: een inleiding die het onderwerp en de opbouw kadert, een kern die de literatuur thematisch bespreekt en met elkaar in dialoog brengt, en een besluit dat de belangrijkste inzichten en eventuele hiaten in het onderzoek samenvat.</p><p>Schrijven is vaak ook herschrijven: lees je tekst kritisch na op argumentatie, opbouw en taalgebruik.</p>"
+  }
+};
+
+const totalSteps = Object.keys(explanations).length + 1; // +1 voor correct refereren
+const seen = new Set();
+
+const explainPanel = document.getElementById('explainPanel');
+const explainTitle = document.getElementById('explainTitle');
+const explainText = document.getElementById('explainText');
+const genaiNote = document.getElementById('genaiNote');
+const citationPanel = document.getElementById('citationPanel');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const citationRing = document.getElementById('citationRing');
+const citationArcText = document.getElementById('citationArcText');
+
+function clearActive(){
+  document.querySelectorAll('.node-group').forEach(g => g.classList.remove('active'));
+  citationRing.classList.remove('active');
+  citationArcText.classList.remove('active');
+}
+
+function updateProgress(id){
+  seen.add(id);
+  const pct = Math.round((seen.size/totalSteps)*100);
+  progressFill.style.width = pct + '%';
+  progressText.innerHTML = `<b>${seen.size}</b> van ${totalSteps} onderdelen bekeken`;
+}
+
+function activateStep(id, el){
+  clearActive();
+  if(el) el.classList.add('active');
+
+  citationPanel.classList.remove('visible');
+  explainPanel.style.display = 'block';
+
+  const info = explanations[id];
+  if(info){
+    explainTitle.innerHTML = info.title;
+    explainText.innerHTML = info.text;
+    explainText.classList.remove('placeholder');
+    genaiNote.style.display = info.genai ? 'block' : 'none';
+    updateProgress(id);
+  }
+}
+
+function activateCitation(){
+  clearActive();
+  citationRing.classList.add('active');
+  citationArcText.classList.add('active');
+
+  explainPanel.style.display = 'none';
+  citationPanel.classList.add('visible');
+  updateProgress('citeren');
+}
+
+document.querySelectorAll('.node-group').forEach(g => {
+  const id = g.dataset.id;
+  g.addEventListener('click', () => activateStep(id, g));
+  g.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activateStep(id, g); }
+  });
+});
+
+[citationRing, citationArcText].forEach(el => {
+  el.addEventListener('click', activateCitation);
+  el.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activateCitation(); }
+  });
+});
+</script>
+
+</body>
+</html>
